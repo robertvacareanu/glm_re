@@ -138,6 +138,7 @@ def get_prepared_dataset(tokenizer, **args):
 
 
     max_length   = args.get('max_length', 512)
+    with_answer  = args.get('with_answer', True) # Whether to append the answer or not. When not, this means we are interested in generating the answer
 
     train      = []
     validation = []
@@ -161,24 +162,24 @@ def get_prepared_dataset(tokenizer, **args):
         obj       = ' '.join(line['object'])
         subj_type = entity_name_to_verbalization[line['subj_type']]
         obj_type  = entity_name_to_verbalization[line['obj_type']]
-        for example in get_template(' '.join(line['token']), templates=valid_templates, subj=subj, obj=obj, subj_type=subj_type, obj_type=obj_type, relation=line['relation'], eos_token=tokenizer.eos_token, **additional_details):
-            train.append({**example, 'id': i})
+        for example in get_template(' '.join(line['token']), templates=valid_templates, subj=subj, obj=obj, subj_type=subj_type, obj_type=obj_type, relation=line['relation'], eos_token=tokenizer.eos_token, with_answer=with_answer, **additional_details):
+            train.append({**example})
     for i, line in enumerate(d['validation']):
         valid_templates = {k:relation_to_text[k] for k in entity_types_to_valid_relations[(line['subj_type'], line['obj_type'])]}
         subj      = ' '.join(line['subject'])
         obj       = ' '.join(line['object'])
         subj_type = entity_name_to_verbalization[line['subj_type']]
         obj_type  = entity_name_to_verbalization[line['obj_type']]
-        for example in get_template(' '.join(line['token']), templates=valid_templates, subj=subj, obj=obj, subj_type=subj_type, obj_type=obj_type, relation=line['relation'], eos_token=tokenizer.eos_token, **additional_details):
-            validation.append({**example, 'id': i})
+        for example in get_template(' '.join(line['token']), templates=valid_templates, subj=subj, obj=obj, subj_type=subj_type, obj_type=obj_type, relation=line['relation'], eos_token=tokenizer.eos_token, with_answer=with_answer, **additional_details):
+            validation.append({**example})
     for i, line in enumerate(d['test']):
         valid_templates = {k:relation_to_text[k] for k in entity_types_to_valid_relations[(line['subj_type'], line['obj_type'])]}
         subj      = ' '.join(line['subject'])
         obj       = ' '.join(line['object'])
         subj_type = entity_name_to_verbalization[line['subj_type']]
         obj_type  = entity_name_to_verbalization[line['obj_type']]
-        for example in get_template(' '.join(line['token']), templates=valid_templates, subj=subj, obj=obj, subj_type=subj_type, obj_type=obj_type, relation=line['relation'], eos_token=tokenizer.eos_token, **additional_details):
-            test.append({**example, 'id': i})
+        for example in get_template(' '.join(line['token']), templates=valid_templates, subj=subj, obj=obj, subj_type=subj_type, obj_type=obj_type, relation=line['relation'], eos_token=tokenizer.eos_token, with_answer=with_answer, **additional_details):
+            test.append({**example})
 
     return DatasetDict({
         'train'     : Dataset.from_list(train),
@@ -188,7 +189,7 @@ def get_prepared_dataset(tokenizer, **args):
         **tokenizer(x['input'], truncation=True, max_length=max_length), 
     }, batched=True, load_from_cache_file=False).remove_columns(['input'])
 
-def get_template(text: str, templates: Dict[str, Template], subj, obj, subj_type, obj_type, relation, language, dataset, task='relation_extraction', eos_token='') -> List[Dict[str, str]]:
+def get_template(text: str, templates: Dict[str, Template], subj, obj, subj_type, obj_type, relation, language, dataset, task='relation_extraction', eos_token='', with_answer=True) -> List[Dict[str, str]]:
     result = []
     for (relation_name, template) in templates.items():
         relation_template = template.substitute(SUBJ=subj, OBJ=obj, SUBJTYPE=subj_type, OBJTYPE=obj_type)
@@ -197,11 +198,17 @@ def get_template(text: str, templates: Dict[str, Template], subj, obj, subj_type
             answer = "Yes"
         else:
             answer = "No"
-        result.append({
-            'input' : f'{inp}Answer: {answer} {eos_token}',
-            'relation_test': relation_name,
-            'relation_gold': relation,
-        })
+        if with_answer:
+            result.append({
+                'input' : f'{inp}Answer: {answer} {eos_token}',
+            })
+        else:
+            result.append({
+            'input' : f'{inp}',#Answer: {answer} {eos_token}',
+                'relation_test': relation_name,
+                'relation_gold': relation,
+            })
+
     return result
 
 
