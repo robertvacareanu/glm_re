@@ -48,13 +48,13 @@ def get_prepared_dataset(tokenizer, **args):
     
     for i, line in enumerate(d['train']):
         template = get_template(line['premise'], hypothesis=line['hypothesis'], answer=line['collapsed_label'], eos_token=tokenizer.eos_token, with_answer=with_answer, **additional_details)
-        train.append({**template})
+        train.append({**template, 'id': i})
     for i, line in enumerate(d['validation']):
         template = get_template(line['premise'], hypothesis=line['hypothesis'], answer=line['collapsed_label'], eos_token=tokenizer.eos_token, with_answer=with_answer, **additional_details)
-        validation.append({**template})
+        validation.append({**template, 'id': i})
     for i, line in enumerate(d['test']):
         template = get_template(line['premise'], hypothesis=line['hypothesis'], answer=line['collapsed_label'], eos_token=tokenizer.eos_token, with_answer=with_answer, **additional_details)
-        test.append({**template})
+        test.append({**template, 'id': i})
 
     return DatasetDict({
         'train'     : Dataset.from_list(train),
