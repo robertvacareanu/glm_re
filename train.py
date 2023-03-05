@@ -5,8 +5,12 @@ from nli_task import get_prepared_dataset as get_nli_dataset
 
 import datasets
 
+import numpy as np
+
 # Import the W&B Python Library 
 import os
+
+from utils import groupby
 
 os.environ['WANDB_PROJECT']   = 'glm_re'
 os.environ['WANDB_LOG_MODEL'] = 'false'
@@ -17,9 +21,13 @@ set_seed(1)
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
 tokenizer.pad_token = tokenizer.eos_token
 model     = AutoModelForCausalLM.from_pretrained("gpt2")
-dataset_re   = get_re_dataset(tokenizer=tokenizer)
-dataset_nli  = get_nli_dataset(tokenizer=tokenizer)
-dataset = datasets.interleave_datasets([dataset_re['train'].filter(lambda x: len(x['input_ids']) < 112), dataset_nli['train'].filter(lambda x: len(x['input_ids']) < 112)])
+dataset_re   = get_re_dataset(tokenizer=tokenizer)['train'].filter(lambda x: len(x['input_ids']) < 112) #.remove_columns(['id'])
+dataset_re_grouped, relations_grouped = groupby(dataset_re, 'relation_gold')
+probabilities = np.array([len(x) for x in dataset_re_grouped])
+probabilities = probabilities/probabilities**(3/4)
+probabilities = probabilities/probabilities.sum()
+dataset_nli  = get_nli_dataset(tokenizer=tokenizer).remove_columns(['id'])['train'].filter(lambda x: len(x['input_ids']) < 112)
+dataset = datasets.interleave_datasets([x.remove_columns(['relation_test', 'relation_gold', 'id']) for x in dataset_re_grouped], probabilities=probabilities, stopping_strategy='all_exhausted')# + [0.5])
 
 print(dataset)
 
