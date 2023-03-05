@@ -163,7 +163,8 @@ def get_prepared_dataset(tokenizer, **args):
         subj_type = entity_name_to_verbalization[line['subj_type']]
         obj_type  = entity_name_to_verbalization[line['obj_type']]
         for example in get_template(' '.join(line['token']), templates=valid_templates, subj=subj, obj=obj, subj_type=subj_type, obj_type=obj_type, relation=line['relation'], eos_token=tokenizer.eos_token, with_answer=with_answer, **additional_details):
-            train.append({**example})
+            # train.append({**example})
+            train.append({**example, 'id': i})
     for i, line in enumerate(d['validation']):
         valid_templates = {k:relation_to_text[k] for k in entity_types_to_valid_relations[(line['subj_type'], line['obj_type'])]}
         subj      = ' '.join(line['subject'])
@@ -171,7 +172,8 @@ def get_prepared_dataset(tokenizer, **args):
         subj_type = entity_name_to_verbalization[line['subj_type']]
         obj_type  = entity_name_to_verbalization[line['obj_type']]
         for example in get_template(' '.join(line['token']), templates=valid_templates, subj=subj, obj=obj, subj_type=subj_type, obj_type=obj_type, relation=line['relation'], eos_token=tokenizer.eos_token, with_answer=with_answer, **additional_details):
-            validation.append({**example})
+            # validation.append({**example})
+            validation.append({**example, 'id': i})
     for i, line in enumerate(d['test']):
         valid_templates = {k:relation_to_text[k] for k in entity_types_to_valid_relations[(line['subj_type'], line['obj_type'])]}
         subj      = ' '.join(line['subject'])
@@ -179,7 +181,8 @@ def get_prepared_dataset(tokenizer, **args):
         subj_type = entity_name_to_verbalization[line['subj_type']]
         obj_type  = entity_name_to_verbalization[line['obj_type']]
         for example in get_template(' '.join(line['token']), templates=valid_templates, subj=subj, obj=obj, subj_type=subj_type, obj_type=obj_type, relation=line['relation'], eos_token=tokenizer.eos_token, with_answer=with_answer, **additional_details):
-            test.append({**example})
+            # test.append({**example})
+            test.append({**example, 'id': i})
 
     return DatasetDict({
         'train'     : Dataset.from_list(train),
@@ -198,16 +201,16 @@ def get_template(text: str, templates: Dict[str, Template], subj, obj, subj_type
             answer = "Yes"
         else:
             answer = "No"
+        current_dict = {}
+        current_dict['relation_test'] = relation_name
+        current_dict['relation_gold'] = relation
+
         if with_answer:
-            result.append({
-                'input' : f'{inp}Answer: {answer} {eos_token}',
-            })
+            current_dict['input'] = f'{inp}Answer: {answer} {eos_token}'   
         else:
-            result.append({
-            'input' : f'{inp}',#Answer: {answer} {eos_token}',
-                'relation_test': relation_name,
-                'relation_gold': relation,
-            })
+            current_dict['input'] = f'{inp}'
+
+        result.append(current_dict)
 
     return result
 
