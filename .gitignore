@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 wandb/
 .history/
-output/
+output*/
 *.pickle
